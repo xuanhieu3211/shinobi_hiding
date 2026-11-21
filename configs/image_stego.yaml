@@ -1,0 +1,116 @@
+# Shinobi Hiding - Image Steganography Config (Supplementary Branch)
+# Hide 128x128 secret image in 256x256 cover image
+
+model:
+  cover_size: 256
+  secret_size: 128
+  secret_channels: 3
+  base_channels: 64
+  encoder_depth: 5
+  use_residual_blocks: true
+  decoder_type: "unet"          # Symmetric U-Net decoder for image reconstruction
+
+discriminator:
+  type: "patchgan_spectral"
+  input_channels: 3
+  base_channels: 64
+  n_layers: 3
+  patch_size: 70
+
+noise:
+  layers:
+    - name: "identity"
+      params: {}
+    - name: "jpeg"
+      params:
+        quality_min: 75
+        quality_max: 90
+        differentiable: true
+    - name: "gaussian"
+      params:
+        std_min: 0.01
+        std_max: 0.02
+    - name: "dropout"
+      params:
+        p_min: 0.1
+        p_max: 0.2
+    - name: "crop"
+      params:
+        scale_min: 0.85
+        scale_max: 1.0
+    - name: "resize"
+      params:
+        scale_min: 0.5
+        scale_max: 2.0
+    - name: "rotation"
+      params:
+        degrees: 10
+    - name: "brightness_contrast"
+      params:
+        brightness: 0.2
+        contrast: 0.2
+
+  curriculum:
+    - name: "phase1_clean"
+      epochs: [0, 10]
+      active_layers: ["identity"]
+    - name: "phase2_light"
+      epochs: [10, 20]
+      active_layers: ["identity", "jpeg", "gaussian"]
+      jpeg_quality: 90
+      gaussian_std: 0.01
+    - name: "phase3_medium"
+      epochs: [20, 30]
+      active_layers: ["identity", "jpeg", "gaussian", "dropout", "crop"]
+      jpeg_quality: 75
+      gaussian_std: 0.01
+      dropout_p: 0.1
+      crop_scale: 0.9
+
+loss:
+  lambda_pixel: 1.0       # L1 cover vs stego
+  lambda_secret: 10.0     # L1 secret vs revealed (critical for image branch)
+  lambda_lpips_cover: 5.0 # Perceptual loss on cover
+  lambda_lpips_secret: 10.0 # Perceptual loss on secret reconstruction
+  lambda_adv: 0.5
+
+training:
+  epochs: 30              # Reduced epochs for supplementary branch
+  batch_size: 4           # Smaller batch (secret images need more memory)
+  gradient_accumulation: 8
+  lr: 0.0001
+  lr_discriminator: 0.0001
+  beta1: 0.5
+  beta2: 0.999
+  weight_decay: 0.00001
+  scheduler: "cosine_warmup"
+  warmup_epochs: 3
+  grad_clip: 1.0
+  mixed_precision: true
+  channels_last: true
+  compile_model: false      # torch.compile() requires MSVC on Windows CPU
+  num_workers: 4
+  pin_memory: true
+  seed: 42
+
+validation:
+  interval: 1
+  save_best: true
+  metric: "psnr_secret"   # PSNR of reconstructed secret
+  save_images: true
+  num_vis_samples: 8
+
+data:
+  dataset: "celeba"
+  root: "data/celeba"
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  cover_size: 256
+  secret_size: 128
+
+paths:
+  checkpoints: "checkpoints/image"
+  logs: "logs/image"
+  outputs: "outputs/image"
+  pretrained_lpips: "weights/lpips_alexnet.pth"

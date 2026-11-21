@@ -1,0 +1,46 @@
+# Shinobi Hiding - Text Corpus for Message Generation
+# Mỗi dòng là một văn bản mẫu. Dùng cho message_source: "text_file"
+
+Hello world this is a secret message
+The quick brown fox jumps over the lazy dog
+Steganography is the art of hiding information
+Deep learning enables invisible watermarks
+Neural networks can hide data in images
+This message is hidden inside the picture
+Cover image looks normal but contains secrets
+Encoder decoder architecture for steganography
+Adversarial training makes stego undetectable
+Perceptual loss preserves visual quality
+Curriculum noise improves robustness
+Bit error rate should be near zero
+Message recovery must be perfect
+Steganalysis resistance is crucial
+SRNet and XuNet are strong detectors
+LPIPS measures perceptual similarity
+PSNR and SSIM measure image quality
+U-Net with skip connections works well
+PatchGAN discriminator with spectral norm
+Mixed precision training saves VRAM
+Gradient accumulation simulates large batches
+Channels last memory format is faster
+Torch compile speeds up training
+Text to bits encoding uses ASCII
+One hundred bits holds twelve characters
+Two hundred fifty six bits holds thirty two chars
+Image in image hides secret pictures
+Secret image size one twenty eight squared
+Cover image size two fifty six squared
+Reconstruction loss uses L1 and LPIPS
+Message loss uses binary cross entropy
+Total loss combines all components
+Training takes sixty epochs for text
+Validation every epoch saves best model
+Checkpoint stores model and optimizer state
+TensorBoard logs training metrics
+Gradio demo for easy testing
+Encode text into cover image
+Decode text from stego image
+Evaluate quality and robustness
+Steganalysis attack test with SRNet
+Robustness test with JPEG noise
+Final model ready for deployment

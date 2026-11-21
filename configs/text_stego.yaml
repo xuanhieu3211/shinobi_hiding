@@ -1,0 +1,142 @@
+# Shinobi Hiding - Text Steganography Config
+# Main branch: Hide text/bit string (100-256 bits) in 256x256 cover image
+
+# Model Architecture
+model:
+  cover_size: 256
+  message_length: 100          # Default: 100 bits (~12-15 ASCII chars), supports up to 256
+  max_message_length: 256
+  embed_dim: 64                # Per-bit embedding dimension
+  base_channels: 64            # U-Net base channel width
+  encoder_depth: 5             # U-Net levels
+  use_residual_blocks: true
+  decoder_type: "conv_fc"      # Options: "conv_fc", "transformer"
+  transformer_layers: 2
+  transformer_heads: 4
+
+# Discriminator (PatchGAN with SpectralNorm)
+discriminator:
+  type: "patchgan_spectral"
+  input_channels: 3
+  base_channels: 64
+  n_layers: 3                  # Reduced from 5 for 8GB VRAM stability
+  patch_size: 70
+
+# Noise Layers (Curriculum Learning)
+noise:
+  layers:
+    - name: "identity"
+      params: {}
+    - name: "jpeg"
+      params:
+        quality_min: 75
+        quality_max: 90
+        differentiable: true   # STE estimator
+    - name: "gaussian"
+      params:
+        std_min: 0.01
+        std_max: 0.02
+    - name: "dropout"
+      params:
+        p_min: 0.1
+        p_max: 0.2
+    - name: "crop"
+      params:
+        scale_min: 0.85
+        scale_max: 1.0
+    - name: "resize"
+      params:
+        scale_min: 0.5
+        scale_max: 2.0
+    - name: "rotation"
+      params:
+        degrees: 10
+    - name: "brightness_contrast"
+      params:
+        brightness: 0.2
+        contrast: 0.2
+    - name: "salt_pepper"
+      params:
+        prob: 0.01
+    - name: "blur"
+      params:
+        kernel_size: 3
+
+  curriculum:
+    - name: "phase1_clean"
+      epochs: [0, 15]
+      active_layers: ["identity"]
+    - name: "phase2_light"
+      epochs: [15, 30]
+      active_layers: ["identity", "jpeg", "gaussian"]
+      jpeg_quality: 90
+      gaussian_std: 0.01
+    - name: "phase3_medium"
+      epochs: [30, 45]
+      active_layers: ["identity", "jpeg", "gaussian", "dropout", "crop"]
+      jpeg_quality: 75
+      gaussian_std: 0.01
+      dropout_p: 0.1
+      crop_scale: 0.9
+    - name: "phase4_heavy"
+      epochs: [45, 60]
+      active_layers: ["identity", "jpeg", "gaussian", "dropout", "crop", "resize", "rotation", "brightness_contrast"]
+      jpeg_quality: 75
+      gaussian_std: 0.02
+      dropout_p: 0.2
+      crop_scale: 0.85
+
+# Loss Weights (will be tuned via ablation study)
+loss:
+  lambda_pixel: 1.0       # MSE cover vs stego
+  lambda_lpips: 5.0       # Perceptual loss (LPIPS-AlexNet)
+  lambda_adv: 0.5         # Adversarial loss (LSGAN)
+  lambda_msg: 10.0        # Message reconstruction (BCE per bit)
+
+# Training
+training:
+  epochs: 60
+  batch_size: 8             # Adjust based on VRAM: 8 (8GB) / 16 (12GB+)
+  gradient_accumulation: 4  # Effective batch = batch_size * accumulation
+  lr: 0.0001
+  lr_discriminator: 0.0001
+  beta1: 0.5
+  beta2: 0.999
+  weight_decay: 0.00001
+  scheduler: "cosine_warmup"
+  warmup_epochs: 5
+  grad_clip: 1.0
+  mixed_precision: true     # FP16 AMP
+  channels_last: true       # NHWC memory format
+  compile_model: true     # torch.compile() requires MSVC on Windows CPU
+  num_workers: 4
+  pin_memory: true
+  seed: 42
+
+# Validation
+validation:
+  interval: 1               # Validate every N epochs
+  save_best: true
+  metric: "ber"             # Bit Error Rate (lower is better)
+  save_images: true
+  num_vis_samples: 8
+
+# Data
+data:
+  dataset: "custom"         # Options: celeba, imagenet_subset, custom
+  root: "data/custom"
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  image_size: 256
+  message_source: "random_bits"  # Options: random_bits, text_file, ascii
+  text_corpus: "data/text_corpus.txt"  # If message_source=text_file
+
+# Paths
+paths:
+  checkpoints: "checkpoints/text"
+  logs: "logs/text"
+  outputs: "outputs/text"
+  pretrained_lpips: "weights/lpips_alexnet.pth"
+  pretrained_srnet: "weights/srnet.pth"
+  pretrained_xunet: "weights/xunet.pth"

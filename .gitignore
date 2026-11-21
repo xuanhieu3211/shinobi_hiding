@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data & Checkpoints
+data/celeba/
+checkpoints/
+logs/
+outputs/
+weights/*.pth
+*.pth
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Local config
+configs/local_*.yaml
+.env
+
+# Temporary
+*.tmp
+*.temp
+temp/
